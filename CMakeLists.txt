@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   serial
   std_msgs
+  nav_msgs
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -212,5 +214,8 @@ include_directories(
 add_executable(my_serial src/stm32_serial_driver.cpp)
 target_link_libraries(my_serial ${catkin_LIBRARIES})
 #target_link_libraries(my_serial serial)
+
+add_executable(ros_driver src/stm32_serial_driver_twist.cpp)
+target_link_libraries(ros_driver ${catkin_LIBRARIES})
 
 
