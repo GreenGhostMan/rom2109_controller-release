@@ -95,7 +95,7 @@ int main(int argc, char** argv)
                 char* angZ = (char*)malloc( angZ_len+1 );
                 snprintf( angZ, angZ_len+1, "%f", ang_z);
 
-                strcat(linX,"L");   strcat(linX,angZ); strcat(linX,"A");
+                strcat(linX," ");   strcat(linX,angZ); //strcat(linX,"A");
                 
                 to_mcu = linX; // check \r\n ?
                 transmit = false;
