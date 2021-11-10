@@ -42,6 +42,9 @@ int main(int argc, char** argv)
     tf::TransformBroadcaster broadcaster;
     ros::Subscriber sub = nh_.subscribe("/cmd_vel", 50, twistCallback);
 
+    serial::Serial mySerial( port, baud, timeout_,
+    serial::eightbits, serial::parity_none, serial::stopbits_one, serial::flowcontrol_none );
+    
     ros::Rate r(loop_rate);
 
     char base_link[] = "base_link";
@@ -59,8 +62,7 @@ int main(int argc, char** argv)
         t.child_frame_id = base_link;
         t.transform.translation.z = 0.0;
 
-    serial::Serial mySerial( port, baud, timeout_,
-    serial::eightbits, serial::parity_none, serial::stopbits_one, serial::flowcontrol_none );
+    
     if(! mySerial.isOpen() ) { mySerial.open(); }
 
         while (ros::ok())
