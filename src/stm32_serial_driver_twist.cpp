@@ -52,7 +52,9 @@ int main(int argc, char** argv)
     nav_msgs::Odometry odom_msg;
         odom_msg.header.frame_id = odom;
         odom_msg.child_frame_id = base_link;
+        // position part
         odom_msg.pose.pose.position.z = 0.0;
+        // velocity part
         odom_msg.twist.twist.linear.y = 0.0;
         odom_msg.twist.twist.linear.z = 0.0;
         odom_msg.twist.twist.angular.x = 0.0;
@@ -68,24 +70,40 @@ int main(int argc, char** argv)
         while (ros::ok())
         {   
             current_time = ros::Time::now();
-            // ---------------------------------------------------------- serial readxxxxxxxxxx
+            // ---------------------------------------------------------- start serial read
             if( mySerial.waitReadable() )
             {   
-                std::string read_buffer = mySerial.readline(10, "\r"); mySerial.flushInput();
-                int left_ = 0, right_ =0;
-                std::size_t r_pos = read_buffer.find("r");
-                std::size_t l_pos = read_buffer.find("l");
-                std::string r_rpm = read_buffer.substr(0, r_pos);
-                std::string l_rpm = read_buffer.substr(r_pos+1, l_pos);
-                std::stringstream left(l_rpm);
-                std::stringstream right(r_rpm);
-                left  >> left_;
-                right >> right_;
-                //act.actual_right = right_;
-                //act.actual_left  = left_;
+                std::string read_buffer = mySerial.readline(32, "\r"); mySerial.flushInput(); // 32 not sure.check firmware
+                float x_pos = 0.0, y_pos = 0.0, theta = 0.0;
+                std::size_t position_x = read_buffer.find("x");
+                std::size_t position_y = read_buffer.find("y");
+                std::size_t position_t = read_buffer.find("t");
+
+                std::string x_pos_str = read_buffer.substr(0, position_x);
+                std::string y_pos_str = read_buffer.substr(position_x+1, position_y);
+                std::string theta_str = read_buffer.substr(position_y+1, position_t);
+
+                x_pos = strtof(x_pos_str.c_str(), NULL);
+                y_pos = strtof(y_pos_str.c_str(), NULL);
+                theta = strtof(theta_str.c_str(), NULL);
+                
+                geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(theta);
+                t.transform.translation.x = x_pos;
+                t.transform.translation.y = y_pos;
+                t.transform.rotation = odom_quat;
+                t.header.stamp = current_time;
+                broadcaster.sendTransform(t);
+                
+                odom_msg.header.stamp = current_time;
+                odom_msg.pose.pose.position.x = x_pos;
+                odom_msg.pose.pose.position.y = y_pos;
+                odom_msg.pose.pose.orientation = odom_quat;
+                // can add velocity part
+                odom_msg.twist.twist.linear.x = 0;
+                odom_msg.twist.twist.angular.z = 0;
                 ROS_INFO_STREAM(" you : ");
             }
-            // ----------------------------------------------------------- serial write
+            // ----------------------------------------------------------- start serial write
             std::string to_mcu;
             if(transmit) 
             {
@@ -103,28 +121,13 @@ int main(int argc, char** argv)
                 transmit = false;
                 free(linX); free(angZ);
             }else {
-                to_mcu = "0.0L0.0A";
+                to_mcu = "0.0 0.0";
             }
             mySerial.write(to_mcu);
+            // ----------------------------------------------------------- end serial write
 
-                geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(theta);
-                t.transform.translation.x = x_pos;
-                t.transform.translation.y = y_pos;
-                t.transform.rotation = odom_quat;
-                t.header.stamp = current_time;
 
-                broadcaster.sendTransform(t);
-                
-                odom_msg.header.stamp = current_time;
-                odom_msg.pose.pose.position.x = x_pos;
-                odom_msg.pose.pose.position.y = y_pos;
-                odom_msg.pose.pose.orientation = odom_quat;
-
-                
-                odom_msg.twist.twist.linear.x = 0;
-                odom_msg.twist.twist.angular.z = 0;
-
-                odom_pub.publish(odom_msg);
+            odom_pub.publish(odom_msg);
             ros::spinOnce();
             r.sleep();
         }
